@@ -1,0 +1,78 @@
+---
+title: "Realization of picture compression using SVM"
+author: "Qiming Xue"
+date: "04/13/2020"
+output: pdf_document
+---
+
+The picture compression can be done by using SVM. The mechanism is instructive for learning PCA and SVM but somehow redundant in a sense of picture processing. Since the picture has to be broken down to large matrices for the three primary colors. Then we need to capture the principal components of them respectively for dimension reduction. The process can generate hundreds Mbs of data for a single 668kb picture.
+
+The "jpeg" and "factoextra" package will be used for picture decomposition and PCA.
+
+
+```{r warning=FALSE,message=FALSE}
+setwd("D:/Books/Realization of picture compression with SVM")
+library(factoextra)
+library(jpeg)
+```
+
+
+```{r}
+Zima<-readJPEG("43415398_p0.jpeg")
+ZimaRed<-Zima[,,1]
+ZimaGreen<-Zima[,,2]
+ZimaBlue<-Zima[,,3]
+
+#PCA for the three primary colors
+ZimaRed.pca<-prcomp(ZimaRed,center = FALSE)
+ZimaGreen.pca<-prcomp(ZimaGreen,center = FALSE)
+ZimaBlue.pca<-prcomp(ZimaBlue,center = FALSE)
+
+ZimaRGB<-list(ZimaRed.pca,ZimaGreen.pca,ZimaBlue.pca)
+```  
+The steps for PCA are shown above by performing PCA to each color before combining them.  
+  
+
+```{r}
+
+#For Red:
+fviz_eig(ZimaRed.pca)
+
+
+#For Green:
+fviz_eig(ZimaGreen.pca)
+
+
+#For Blue
+fviz_eig(ZimaBlue.pca)
+
+```  
+We can observe that most of the information is embedded in the first PC for the three colors. Then let's check how far we can proceed to get a compressed picture with acceptable size and resolution.
+
+```{r warning=FALSE, eval=FALSE}
+for(i in seq.int(50,round(nrow(Zima)-10),length.out = 10))
+{
+  pca.img<-sapply(ZimaRGB,function(j)
+  {
+    compressed.img<-j$x[,1:i]%*%t(j$rotation[,1:i])
+  },simplify = 'array')
+  
+  writeJPEG(pca.img,paste('ZimaCompressed',round(i,0),ep=' '))
+  
+}
+```  
+The original picture size is 668kb. The compressed picture with 50 PCs has a size of 117kb, capturing most of the feature, but lose some resolution. On the other hand, a compressed picture with higher PCs (251 PCs) can significantly increase the resolution without significantly increase the picture size.
+
+![original picture (668kb)]("D:/Books/Realization of picture compression with SVM/43415398_p0.jpeg")  
+
+
+![picture with 1 PC (74kb)]("D:/Books/Realization of picture compression with SVM/ZimaCompressed 1.jpeg")
+
+
+![picture with 25 PCs (111kb)]("D:/Books/Realization of picture compression with SVM/ZimaCompressed 25.jpeg")  
+
+
+![picture with 50 PCs (117kb)]("D:/Books/Realization of picture compression with SVM/ZimaCompressed 50.jpeg")  
+
+
+![picture with 251 PCs (121kb)]("D:/Books/Realization of picture compression with SVM/ZimaCompressed 251.jpeg")  
